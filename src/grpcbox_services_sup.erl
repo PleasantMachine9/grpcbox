@@ -66,9 +66,35 @@ pool_name(ListenOpts) ->
     name("grpcbox_pool", ListenOpts).
 
 name(Prefix, ListenOpts) ->
-    Port = maps:get(port, ListenOpts, 8080),
-    IPAddress = maps:get(ip, ListenOpts, {0, 0, 0, 0}),
-    list_to_atom(Prefix ++ "_" ++ inet_parse:ntoa(IPAddress) ++ "_" ++ integer_to_list(Port)).
+    ExplicitSocketOpts = maps:get(socket_options, ListenOpts, #{}),
+    case maps:get(ifaddr, ExplicitSocketOpts, undefined) of
+        {local, UnixPath} ->
+            name_for_unix_socket(Prefix, UnixPath);
+        _ -> %% not unix
+            Port = maps:get(port, ListenOpts, 8080),
+            IPAddress = maps:get(ip, ListenOpts, {0,0,0,0}),
+            name_for_ip_socket(Prefix, IPAddress, Port)
+    end.
+
+name_for_unix_socket(Prefix, UnixPath) ->
+    {FirstChar, Rest} = case UnixPath of
+        <<F:1/binary,R/binary>> ->
+            {list_to_integer(binary_to_list(F)), binary_to_list(R)};
+        Str when is_list(UnixPath) ->
+            [F | R] = lists:flatten(Str),
+            {F, R}
+    end,
+    SocketDisplayName = if
+        FirstChar == 0 ->
+            ["unix-abstract:", Rest];
+        true ->
+            ["unix:", [FirstChar | Rest]]
+    end,
+    list_to_atom(lists:flatten([Prefix, "_", SocketDisplayName])).
+
+name_for_ip_socket(Prefix, IPAddress, Port) ->
+    list_to_atom(lists:flatten([
+        Prefix, "_", inet_parse:ntoa(IPAddress), "_", integer_to_list(Port)])).
 
 get_authfun(true, Options) ->
     case maps:get(auth_fun, Options, undefined) of

@@ -11,28 +11,24 @@
                  ctx]},
   {env, [{client, #{channels => [%% {default_channel, [{http, "localhost", 8080, []}], #{}}
                                 ]}},
-
-         {grpc_opts, #{service_protos => [],
-                       client_cert_dir => ""}},
-
-         {transport_opts, #{ssl => false,
-                            keyfile => "",
-                            certfile => "",
-                            cacertfile => ""}},
-
-         {listen_opts, #{port => 8080,
-                         ip => {0,0,0,0}}},
-
-         %% server acceptors
-         {pool_opts, #{size => 10}},
-
-         %% chatterbox options
-         {server_opts, #{header_table_size => 4096,
-                         enable_push => 1,
-                         max_concurrent_streams => unlimited,
-                         initial_window_size => 65535,
-                         max_frame_size => 16384,
-                         max_header_list_size => unlimited}}]},
+         {servers, [
+             #{grpc_opts => #{
+                 service_protos => [] },
+               server_opts => #{},
+               pool_opts => #{},
+               transport_opts => #{},
+               listen_opts => #{
+                   %% must not be mixed when ifaddr => {local, _}
+                   %% ip => {127,0,0,1},
+                   %% must be omitted or zero when ifaddr => {local, _}
+                   %% port => 8080
+                   socket_options => #{
+                      %% use when binding to a filesystem unix socket
+                      %% ifaddr => {local, "/path/to/unix_sock"]}
+                      %% use when binding to an abstract unix socket
+                      %% ifaddr => {local, [0 | "unix_abs_sock_name"]}
+                   }
+            }}]}]},
   {modules,[]},
   {licenses,["Apache 2.0"]},
   {links,[{"Github","https://github.com/tsloughter/grpcbox"}]}]}.
